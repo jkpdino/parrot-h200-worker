@@ -1,0 +1,7 @@
+.git
+.build
+native-metal/.build
+__pycache__
+*.pyc
+.venv
+benchmark_*_results.json

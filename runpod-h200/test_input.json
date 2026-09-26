@@ -1,0 +1,25 @@
+{
+  "input": {
+    "operation": "sweep",
+    "configs": [
+      {
+        "batch": 256,
+        "seq_len": 512,
+        "bag_size": 4,
+        "warmup": 3,
+        "runs": 7,
+        "dtype": "bfloat16",
+        "compile_mode": "max-autotune"
+      },
+      {
+        "batch": 128,
+        "seq_len": 1024,
+        "bag_size": 4,
+        "warmup": 3,
+        "runs": 7,
+        "dtype": "bfloat16",
+        "compile_mode": "max-autotune"
+      }
+    ]
+  }
+}
