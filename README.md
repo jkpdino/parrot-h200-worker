@@ -269,9 +269,12 @@ alone is insufficient. Raw samples are saved in the corresponding
 
 ## H200 CUDA training kernel
 
-`ModelConfig(moe_backend="training_cuda")` stores routed expert weights in
-grouped-GEMM layout and uses exact, differentiable top-2 routing without token
-dropping. `benchmark_cuda_training.py` compiles the complete model with
+Install `parrot-xl[cuda]` to enable the CUDA training backend.
+`ModelConfig(moe_backend="training_cuda")` uses Liger's Triton kernels to fuse
+AttnRes normalization, scoring, softmax, and mixing; RMSNorm; SwiGLU; and routed
+expert gather, projections, activation, and token combination. Routing remains
+exact and differentiable without token dropping. `benchmark_cuda_training.py`
+compiles the complete model with
 TorchInductor and times the forward pass, shifted cross-entropy, router
 auxiliary loss, and backward pass with CUDA events. Gradient clearing, optimizer
 updates, and data loading remain outside the timed region.

@@ -8,6 +8,9 @@ version = "0.1.0"
 requires-python = ">=3.10"
 dependencies = ["torch>=2.5", "tokenizers>=0.20"]
 
+[project.optional-dependencies]
+cuda = ["liger-kernel>=0.8.3,<0.9"]
+
 [tool.setuptools.packages.find]
 include = ["parrot*"]
 

@@ -1,34 +1,65 @@
-"""CUDA training operators for Parrot's sparse experts."""
+"""Fused CUDA training operators for Parrot."""
 from __future__ import annotations
 
+import os
+
 import torch
-from torch.nn import functional as F
+
+
+def _liger_ops():
+    """Import CUDA-only kernels lazily so CPU and Metal installs still work."""
+    # Autotuning can temporarily retain several full expert working sets. The
+    # large benchmark nearly fills an H200, so use Liger's fixed configuration.
+    os.environ.setdefault("LIGER_FUSED_MOE_AUTOTUNE", "0")
+    try:
+        from liger_kernel.ops import (
+            LigerAttnResFunction,
+            LigerFusedMoEFunction,
+            LigerRMSNormFunction,
+            LigerSiLUMulFunction,
+        )
+    except ImportError as error:
+        raise RuntimeError(
+            "training_cuda requires the 'cuda' extra: "
+            "pip install 'parrot-xl[cuda]'"
+        ) from error
+    return (
+        LigerAttnResFunction,
+        LigerFusedMoEFunction,
+        LigerRMSNormFunction,
+        LigerSiLUMulFunction,
+    )
+
+
+def rms_norm(value, weight, eps):
+    """RMSNorm with fused forward and backward CUDA kernels."""
+    _, _, function, _ = _liger_ops()
+    return function.apply(value, weight, eps, 0.0, "llama", False, None)
+
+
+def swiglu(gate, up):
+    """Fuse SiLU, multiplication, and both activation gradients."""
+    *_, function = _liger_ops()
+    return function.apply(gate, up, 1.0, 1.0)
+
+
+def depth_mix(module, sources):
+    """Fuse AttnRes normalization, scoring, softmax, mixing, and backward."""
+    function, *_ = _liger_ops()
+    values = torch.stack(sources)
+    return function.apply(
+        values, module.query, module.norm.weight, module.norm.eps
+    )
 
 
 def grouped_experts(module, flat, indices, weights):
-    """Evaluate all routed experts with three grouped GEMMs and exact routing."""
-    tokens, dim = flat.shape
-    top_k = indices.shape[1]
-    expert_ids = indices.reshape(-1)
-    token_ids = torch.arange(tokens, device=flat.device).repeat_interleave(top_k)
-    order = expert_ids.argsort()
-    sorted_experts = expert_ids[order]
-    sorted_tokens = token_ids[order]
-    grouped_input = flat[sorted_tokens].contiguous()
-    counts = torch.zeros(
-        module.cfg.n_experts, device=flat.device, dtype=torch.int32
+    """Run fused gather/GEMM/SwiGLU/GEMM/combine MoE forward and backward."""
+    _, function, *_ = _liger_ops()
+    routed = function.apply(
+        flat,
+        module.expert_gate_up,
+        module.expert_down,
+        indices.to(torch.int32),
+        weights,
     )
-    counts.scatter_add_(
-        0, sorted_experts, torch.ones_like(sorted_experts, dtype=torch.int32)
-    )
-    offsets = counts.cumsum(0).to(torch.int32)
-
-    gate, up = torch._grouped_mm(
-        grouped_input, module.expert_gate_up, offs=offsets
-    ).chunk(2, dim=-1)
-    hidden = F.silu(gate) * up
-    routed = torch._grouped_mm(hidden, module.expert_down, offs=offsets)
-    routed = routed * weights.reshape(-1)[order, None].to(routed.dtype)
-
-    result = module.shared(flat)
-    return result.index_add(0, sorted_tokens, routed)
+    return module.shared(flat) + routed

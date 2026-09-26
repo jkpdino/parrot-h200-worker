@@ -24,6 +24,10 @@ The timed region includes the full model forward pass, shifted cross-entropy,
 router auxiliary loss, and backward pass. It excludes gradient clearing and the
 optimizer. CUDA events measure GPU execution after the warmup iterations.
 
+The image installs Liger Kernel for fused AttnRes, RMSNorm, SwiGLU, and MoE
+forward/backward kernels. MoE autotuning is disabled because its temporary
+working sets can exceed H200 memory at the largest benchmark batches.
+
 For persistent development, launch a normal Pod with
 `runpod/pytorch:1.2.0-cu1281-torch280-ubuntu2404`, clone the repository into
 `/workspace`, and invoke `benchmark()` directly. The measured H200 maximum in

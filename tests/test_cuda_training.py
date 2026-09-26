@@ -30,11 +30,11 @@ class CudaTrainingTests(unittest.TestCase):
             ):
                 experts = reference_block.moe.experts
                 grouped_block.moe.expert_gate_up.copy_(torch.stack([
-                    torch.cat((expert.gate.weight.T, expert.up.weight.T), dim=-1)
+                    torch.cat((expert.gate.weight, expert.up.weight), dim=0)
                     for expert in experts
                 ]))
                 grouped_block.moe.expert_down.copy_(torch.stack([
-                    expert.down.weight.T for expert in experts
+                    expert.down.weight for expert in experts
                 ]))
                 grouped_block.moe.shared.gate_up.weight.copy_(torch.cat((
                     reference_block.moe.shared.gate.weight,
@@ -58,12 +58,38 @@ class CudaTrainingTests(unittest.TestCase):
             reference.blocks, grouped.blocks
         ):
             expected_gate_up_grad = torch.stack([
-                torch.cat((expert.gate.weight.grad.T, expert.up.weight.grad.T), dim=-1)
+                torch.cat((expert.gate.weight.grad, expert.up.weight.grad), dim=0)
                 for expert in reference_block.moe.experts
             ])
             torch.testing.assert_close(
                 grouped_block.moe.expert_gate_up.grad,
                 expected_gate_up_grad,
+                atol=3e-2,
+                rtol=3e-2,
+            )
+            expected_down_grad = torch.stack([
+                expert.down.weight.grad
+                for expert in reference_block.moe.experts
+            ])
+            torch.testing.assert_close(
+                grouped_block.moe.expert_down.grad,
+                expected_down_grad,
+                atol=3e-2,
+                rtol=3e-2,
+            )
+            torch.testing.assert_close(
+                grouped_block.moe.router.weight.grad,
+                reference_block.moe.router.weight.grad,
+                atol=3e-2,
+                rtol=3e-2,
+            )
+        for expected, actual in zip(reference.depth_mix, grouped.depth_mix):
+            torch.testing.assert_close(
+                actual.query.grad, expected.query.grad, atol=3e-2, rtol=3e-2
+            )
+            torch.testing.assert_close(
+                actual.norm.weight.grad,
+                expected.norm.weight.grad,
                 atol=3e-2,
                 rtol=3e-2,
             )
