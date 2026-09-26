@@ -283,6 +283,19 @@ TorchInductor compilation, the median of seven runs after two warmups was
 positions/second**. Peak allocated memory was 141.52 GB. The result is saved in
 `benchmark_cuda_h200_results.json`.
 
+Doubling the routed experts from 16 to 32 while retaining top-2 routing produced
+the following direct comparison at the same batch and sequence shape:
+
+| Experts | Total parameters | Active parameters/token | Source tokens/sec | Peak allocated |
+| ---: | ---: | ---: | ---: | ---: |
+| 16 | 360.46M | 96.22M | 1,002,107 | 141.52 GB |
+| 32 | 662.64M | 96.41M | **1,005,200** | 142.37 GB |
+
+The 0.31% throughput difference is small enough to treat as benchmark noise.
+Top-2 routing leaves the amount of expert computation per token unchanged, and
+the H200 grouped GEMMs remain well saturated with 32 groups. The raw 32-expert
+samples are saved in `benchmark_cuda_h200_32experts_results.json`.
+
 [NVIDIA specifies](https://www.nvidia.com/en-in/data-center/h200/) 1,979 BF16
 Tensor TFLOP/s for H200 SXM with structured sparsity, or about 989.5 TFLOP/s for
 these dense weights. Dividing that dense peak by the active-parameter training

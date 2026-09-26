@@ -16,6 +16,8 @@ class BenchmarkConfig:
     batch: int = 960
     seq_len: int = 512
     bag_size: int = 4
+    n_experts: int = 16
+    top_k: int = 2
     warmup: int = 2
     runs: int = 7
     dtype: str = "bfloat16"
@@ -33,6 +35,8 @@ class BenchmarkConfig:
             raise ValueError("batch, seq_len, and runs must be positive; warmup must be nonnegative")
         if config.bag_size not in (1, 4) or config.seq_len % config.bag_size:
             raise ValueError("bag_size must be 1 or 4 and divide seq_len")
+        if config.n_experts < 1 or config.top_k < 1 or config.top_k > config.n_experts:
+            raise ValueError("n_experts must be positive and top_k must be in [1, n_experts]")
         if config.seq_len // config.bag_size < 2:
             raise ValueError("the input must contain at least two model positions")
         if config.seq_len // config.bag_size > ModelConfig().max_seq_len:
@@ -63,11 +67,13 @@ def device_info() -> dict[str, Any]:
     }
 
 
-@lru_cache(maxsize=6)
-def _model(dtype_name: str, compile_mode: str):
+@lru_cache(maxsize=12)
+def _model(dtype_name: str, compile_mode: str, n_experts: int, top_k: int):
     dtype = getattr(torch, dtype_name)
     torch.manual_seed(42)
-    eager = Parrot(ModelConfig(moe_backend="training_cuda")).to(
+    eager = Parrot(ModelConfig(
+        moe_backend="training_cuda", n_experts=n_experts, top_k=top_k
+    )).to(
         device="cuda", dtype=dtype
     ).train()
     if compile_mode == "eager":
@@ -87,7 +93,9 @@ def benchmark(config: BenchmarkConfig) -> dict[str, Any]:
     torch.backends.cudnn.allow_tf32 = True
     torch.backends.cudnn.benchmark = True
     torch.set_float32_matmul_precision("high")
-    eager, model = _model(config.dtype, config.compile_mode)
+    eager, model = _model(
+        config.dtype, config.compile_mode, config.n_experts, config.top_k
+    )
     ids = torch.randint(
         eager.config.vocab_size,
         (config.batch, config.seq_len),
