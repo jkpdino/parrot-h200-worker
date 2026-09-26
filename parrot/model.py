@@ -29,7 +29,8 @@ class ModelConfig:
     expert_dim: int = 512
     shared_expert_dim: int = 256
     moe_backend: Literal[
-        "pytorch", "metal", "dense_mps", "grouped_mps", "training_mps"
+        "pytorch", "metal", "dense_mps", "grouped_mps", "training_mps",
+        "training_cuda"
     ] = "pytorch"
     depth_backend: Literal["pytorch", "metal"] = "pytorch"
     residual: Literal["attnres", "standard"] = "attnres"
@@ -55,7 +56,8 @@ class ModelConfig:
         if self.residual not in ("attnres", "standard"):
             raise ValueError("residual must be attnres or standard")
         if self.moe_backend not in (
-            "pytorch", "metal", "dense_mps", "grouped_mps", "training_mps"
+            "pytorch", "metal", "dense_mps", "grouped_mps", "training_mps",
+            "training_cuda"
         ):
             raise ValueError("invalid moe_backend")
         if self.depth_backend not in ("pytorch", "metal"):
@@ -171,19 +173,30 @@ class LocalGQA(nn.Module):
     def _rope_tables(self, x: Tensor) -> tuple[Tensor, Tensor]:
         # Compute angles in FP32 even when the model weights are BF16.
         d = self.cfg.head_dim
-        cache_key = (
-            x.device.type, x.device.index, x.dtype, self.cfg.max_seq_len, d,
-            self.cfg.rope_theta, torch.is_inference_mode_enabled(),
-        )
-        cached = _ROPE_CACHE.get(cache_key)
-        if cached is None:
+        if torch.compiler.is_compiling():
             freq = self.cfg.rope_theta ** (
                 -torch.arange(0, d, 2, device=x.device).float() / d
             )
             angles = torch.arange(
                 self.cfg.max_seq_len, device=x.device
             ).float()[:, None] * freq
-            cached = (angles.cos().to(x.dtype), angles.sin().to(x.dtype))
+            return angles.cos().to(x.dtype), angles.sin().to(x.dtype)
+        cache_key = (
+            x.device.type, x.device.index, x.dtype, self.cfg.max_seq_len, d,
+            self.cfg.rope_theta,
+        )
+        cached = _ROPE_CACHE.get(cache_key)
+        if cached is None:
+            # Cache ordinary tensors even when the first caller is under
+            # inference_mode; the same tables are then safe in autograd.
+            with torch.inference_mode(False):
+                freq = self.cfg.rope_theta ** (
+                    -torch.arange(0, d, 2, device=x.device).float() / d
+                )
+                angles = torch.arange(
+                    self.cfg.max_seq_len, device=x.device
+                ).float()[:, None] * freq
+                cached = (angles.cos().to(x.dtype), angles.sin().to(x.dtype))
             _ROPE_CACHE[cache_key] = cached
         return cached
 
@@ -437,15 +450,25 @@ class MoE(nn.Module):
         super().__init__()
         self.cfg = cfg
         self.router = nn.Linear(cfg.dim, cfg.n_experts, bias=False)
-        if cfg.moe_backend == "training_mps":
+        if cfg.moe_backend in ("training_mps", "training_cuda"):
+            gate_shape = (
+                (cfg.n_experts, cfg.expert_dim, cfg.dim)
+                if cfg.moe_backend == "training_mps"
+                else (cfg.n_experts, cfg.dim, cfg.expert_dim)
+            )
+            down_shape = (
+                (cfg.n_experts, cfg.dim, cfg.expert_dim)
+                if cfg.moe_backend == "training_mps"
+                else (cfg.n_experts, cfg.expert_dim, cfg.dim)
+            )
             self.expert_gate = nn.Parameter(torch.empty(
-                cfg.n_experts, cfg.expert_dim, cfg.dim
+                *gate_shape
             ))
             self.expert_up = nn.Parameter(torch.empty(
-                cfg.n_experts, cfg.expert_dim, cfg.dim
+                *gate_shape
             ))
             self.expert_down = nn.Parameter(torch.empty(
-                cfg.n_experts, cfg.dim, cfg.expert_dim
+                *down_shape
             ))
             nn.init.normal_(self.expert_gate, std=0.02)
             nn.init.normal_(self.expert_up, std=0.02)
@@ -493,6 +516,9 @@ class MoE(nn.Module):
             )
         elif self.cfg.moe_backend == "training_mps" and x.device.type == "mps":
             from .training import grouped_experts
+            result = grouped_experts(self, flat, indices, weights)
+        elif self.cfg.moe_backend == "training_cuda" and x.device.type == "cuda":
+            from .cuda_training import grouped_experts
             result = grouped_experts(self, flat, indices, weights)
         else:
             result = self.shared(flat)
@@ -682,7 +708,8 @@ class Parrot(nn.Module):
                 lm_loss = cross_entropy(logits, targets.contiguous())
             else:
                 # One log-softmax per position; do not replicate vocab logits per bag.
-                log_probs = logits[:, :-1].float().log_softmax(-1)
+                loss_logits = logits if supervised_logits_only else logits[:, :-1]
+                log_probs = loss_logits.float().log_softmax(-1)
                 valid = targets != -100
                 selected = log_probs.gather(-1, targets.masked_fill(~valid, 0))
                 lm_loss = -(selected * valid).sum() / valid.sum().clamp_min(1)

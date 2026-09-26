@@ -187,8 +187,10 @@ the algebraically equivalent absorbed attention calculation.
 Attention uses PyTorch scaled dot-product attention. Local attention processes
 query chunks against only their relevant key range, with bounded boolean masks
 instead of a full sequence-square mask. SDPA backend selection depends on the
-device and dtype. The training backend dispatches experts with a Python loop;
-the inference-only MPS path uses the grouped Metal kernels described above.
+device and dtype. The default training backend dispatches experts with a Python
+loop. `training_cuda` sorts the top-2 assignments once and evaluates every
+expert with three differentiable grouped GEMMs; the inference-only MPS path uses
+the grouped Metal kernels described above.
 Module checkpointing is optional. 4K training memory and throughput on a 4090
 have not been measured; the starting batch size is not a fit guarantee.
 
@@ -265,11 +267,22 @@ GEMMs and fusion across projections and activations; replacing Python dispatch
 alone is insufficient. Raw samples are saved in the corresponding
 `benchmark_native_metal_*_results.json` files.
 
-## H200 Serverless benchmark
+## H200 CUDA training kernel
 
-`runpod-h200/` packages the full CUDA training benchmark as a Runpod Serverless
-queue worker. It requires an H200 by default, accepts single configurations or
-shape sweeps, and returns CUDA-event timings, throughput, loss, and peak memory.
-Build the image for `linux/amd64` from the repository root and deploy it on the
-`HOPPER_141` GPU pool. See `runpod-h200/README.md` for the commands and request
-format.
+`ModelConfig(moe_backend="training_cuda")` stores routed expert weights in
+grouped-GEMM layout and uses exact, differentiable top-2 routing without token
+dropping. `benchmark_cuda_training.py` compiles the complete model with
+TorchInductor and times the forward pass, shifted cross-entropy, router
+auxiliary loss, and backward pass with CUDA events. Gradient clearing, optimizer
+updates, and data loading remain outside the timed region.
+
+On a Runpod Secure Cloud NVIDIA H200 with PyTorch 2.8.0 and CUDA 12.8, batch 960,
+512 source tokens, `bag_size=4`, BF16 parameters and gradients, and default
+TorchInductor compilation, the median of seven runs after two warmups was
+**0.49049 seconds**, or **1,002,107 source tokens/second** and **250,527 model
+positions/second**. Peak allocated memory was 141.52 GB. The result is saved in
+`benchmark_cuda_h200_results.json`.
+
+`runpod-h200/` also packages the benchmark as a queue worker. Build the image for
+`linux/amd64` from the repository root and deploy it on an H200 pool. See
+`runpod-h200/README.md` for the image and request format.

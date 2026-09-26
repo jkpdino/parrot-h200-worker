@@ -13,13 +13,13 @@ from parrot import ModelConfig, Parrot
 
 @dataclass(frozen=True)
 class BenchmarkConfig:
-    batch: int = 256
+    batch: int = 960
     seq_len: int = 512
     bag_size: int = 4
-    warmup: int = 3
+    warmup: int = 2
     runs: int = 7
     dtype: str = "bfloat16"
-    compile_mode: str = "max-autotune"
+    compile_mode: str = "default"
     require_h200: bool = True
 
     @classmethod
@@ -67,7 +67,7 @@ def device_info() -> dict[str, Any]:
 def _model(dtype_name: str, compile_mode: str):
     dtype = getattr(torch, dtype_name)
     torch.manual_seed(42)
-    eager = Parrot(ModelConfig(moe_backend="pytorch")).to(
+    eager = Parrot(ModelConfig(moe_backend="training_cuda")).to(
         device="cuda", dtype=dtype
     ).train()
     if compile_mode == "eager":
@@ -132,6 +132,7 @@ def benchmark(config: BenchmarkConfig) -> dict[str, Any]:
     source_tokens = config.batch * config.seq_len
     model_positions = source_tokens // config.bag_size
     result = {
+        "backend": "training_cuda",
         "config": asdict(config),
         "device": info,
         "parameters": eager.parameter_counts(),

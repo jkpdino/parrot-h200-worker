@@ -1,8 +1,9 @@
 # Runpod H200 training worker
 
-This queue worker benchmarks Parrot's complete forward, loss, and backward pass
-on an H200. It rejects other GPU models by default and returns the fastest shape
-from a request containing up to 16 configurations.
+This worker benchmarks Parrot's grouped CUDA training backend over the complete
+forward, loss, and backward pass on an H200. It rejects other GPU models by
+default and returns the fastest shape from a request containing up to 16
+configurations.
 
 Build from the repository root because the image includes the `parrot` package:
 
@@ -22,3 +23,9 @@ body.
 The timed region includes the full model forward pass, shifted cross-entropy,
 router auxiliary loss, and backward pass. It excludes gradient clearing and the
 optimizer. CUDA events measure GPU execution after the warmup iterations.
+
+For persistent development, launch a normal Pod with
+`runpod/pytorch:1.2.0-cu1281-torch280-ubuntu2404`, clone the repository into
+`/workspace`, and invoke `benchmark()` directly. The measured H200 maximum in
+the current sweep is 1,002,107 source tokens/second at batch 960, sequence 512,
+and `bag_size=4`.
