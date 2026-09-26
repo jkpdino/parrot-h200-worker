@@ -23,8 +23,9 @@ def grouped_experts(module, flat, indices, weights):
     )
     offsets = counts.cumsum(0).to(torch.int32)
 
-    gate = torch._grouped_mm(grouped_input, module.expert_gate, offs=offsets)
-    up = torch._grouped_mm(grouped_input, module.expert_up, offs=offsets)
+    gate, up = torch._grouped_mm(
+        grouped_input, module.expert_gate_up, offs=offsets
+    ).chunk(2, dim=-1)
     hidden = F.silu(gate) * up
     routed = torch._grouped_mm(hidden, module.expert_down, offs=offsets)
     routed = routed * weights.reshape(-1)[order, None].to(routed.dtype)

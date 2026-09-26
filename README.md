@@ -284,27 +284,33 @@ positions/second**. Peak allocated memory was 141.52 GB. The result is saved in
 `benchmark_cuda_h200_results.json`.
 
 Doubling the routed experts from 16 to 32 while retaining top-2 routing produced
-the following direct comparison at the same batch and sequence shape:
+the following results. The fused backend packs each expert's gate and up
+projections into one grouped GEMM and does the same for the shared expert.
 
-| Experts | Total parameters | Active parameters/token | Source tokens/sec | Peak allocated |
-| ---: | ---: | ---: | ---: | ---: |
-| 16 | 360.46M | 96.22M | 1,002,107 | 141.52 GB |
-| 32 | 662.64M | 96.41M | **1,005,200** | 142.37 GB |
+| Backend | Batch | Source tokens/sec | Peak allocated | Peak reserved |
+| --- | ---: | ---: | ---: | ---: |
+| 16 experts, separate gate/up | 960 | 1,002,107 | 141.52 GB | 144.04 GB |
+| 32 experts, separate gate/up | 960 | 1,005,200 | 142.37 GB | 144.97 GB |
+| 32 experts, fused gate/up | 960 | 1,038,099 | 140.86 GB | 143.21 GB |
+| 32 experts, fused gate/up | 992 | **1,043,680** | 145.48 GB | 147.93 GB |
 
-The 0.31% throughput difference is small enough to treat as benchmark noise.
-Top-2 routing leaves the amount of expert computation per token unchanged, and
-the H200 grouped GEMMs remain well saturated with 32 groups. The raw 32-expert
-samples are saved in `benchmark_cuda_h200_32experts_results.json`.
+Top-2 routing leaves the amount of expert computation per token unchanged. The
+gate/up fusion improves the batch-960 result by 3.27%, and the safe batch increase
+brings the total improvement over the original 32-expert kernel to 3.83%. Batch
+992 reserves 147.93 GB of the H200's 150.12 GB visible memory, so it is a
+benchmark-only limit with little room for allocator variation. Optimizer state
+does not fit at this batch. Raw samples are saved in
+`benchmark_cuda_h200_32experts_fused_results.json`.
 
 [NVIDIA specifies](https://www.nvidia.com/en-in/data-center/h200/) 1,979 BF16
 Tensor TFLOP/s for H200 SXM with structured sparsity, or about 989.5 TFLOP/s for
 these dense weights. Dividing that dense peak by the active-parameter training
-lower bound (`6 * 96,217,344` operations per model position, with four source
-tokens per position) gives a **6.856 million source-token/second math-only
+lower bound (`6 * 96,413,952` operations per model position, with four source
+tokens per position) gives a **6.842 million source-token/second math-only
 ceiling**. It excludes attention, routing, normalization, loss, memory traffic,
 and launch overhead, so it is an upper bound rather than an expected end-to-end
-rate. The measured kernel realizes 144.6 effective TFLOP/s against that lower
-bound, or 14.6% of the dense math ceiling.
+rate. The fused 32-expert result realizes 150.9 effective TFLOP/s against that
+lower bound, or 15.3% of the dense math ceiling.
 
 `runpod-h200/` also packages the benchmark as a queue worker. Build the image for
 `linux/amd64` from the repository root and deploy it on an H200 pool. See

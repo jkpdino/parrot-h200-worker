@@ -445,40 +445,59 @@ class SwiGLU(nn.Module):
         return self.down(F.silu(gate) * up)
 
 
+class FusedSwiGLU(nn.Module):
+    """SwiGLU with one packed gate/up projection for CUDA training."""
+    def __init__(self, dim: int, intermediate: int):
+        super().__init__()
+        self.gate_up = nn.Linear(dim, 2 * intermediate, bias=False)
+        self.down = nn.Linear(intermediate, dim, bias=False)
+
+    def forward(self, x: Tensor) -> Tensor:
+        gate, up = self.gate_up(x).chunk(2, dim=-1)
+        return self.down(F.silu(gate) * up)
+
+
 class MoE(nn.Module):
     def __init__(self, cfg: ModelConfig):
         super().__init__()
         self.cfg = cfg
         self.router = nn.Linear(cfg.dim, cfg.n_experts, bias=False)
-        if cfg.moe_backend in ("training_mps", "training_cuda"):
-            gate_shape = (
-                (cfg.n_experts, cfg.expert_dim, cfg.dim)
-                if cfg.moe_backend == "training_mps"
-                else (cfg.n_experts, cfg.dim, cfg.expert_dim)
-            )
-            down_shape = (
-                (cfg.n_experts, cfg.dim, cfg.expert_dim)
-                if cfg.moe_backend == "training_mps"
-                else (cfg.n_experts, cfg.expert_dim, cfg.dim)
-            )
+        if cfg.moe_backend == "training_mps":
             self.expert_gate = nn.Parameter(torch.empty(
-                *gate_shape
+                cfg.n_experts, cfg.expert_dim, cfg.dim
             ))
             self.expert_up = nn.Parameter(torch.empty(
-                *gate_shape
+                cfg.n_experts, cfg.expert_dim, cfg.dim
             ))
             self.expert_down = nn.Parameter(torch.empty(
-                *down_shape
+                cfg.n_experts, cfg.dim, cfg.expert_dim
             ))
             nn.init.normal_(self.expert_gate, std=0.02)
             nn.init.normal_(self.expert_up, std=0.02)
+            nn.init.normal_(self.expert_down, std=0.02)
+            self.experts = None
+        elif cfg.moe_backend == "training_cuda":
+            self.expert_gate_up = nn.Parameter(torch.empty(
+                cfg.n_experts, cfg.dim, 2 * cfg.expert_dim
+            ))
+            self.expert_down = nn.Parameter(torch.empty(
+                cfg.n_experts, cfg.expert_dim, cfg.dim
+            ))
+            nn.init.normal_(self.expert_gate_up, std=0.02)
             nn.init.normal_(self.expert_down, std=0.02)
             self.experts = None
         else:
             self.experts = nn.ModuleList([
                 SwiGLU(cfg.dim, cfg.expert_dim) for _ in range(cfg.n_experts)
             ])
-        self.shared = SwiGLU(cfg.dim, cfg.shared_expert_dim, cfg.moe_backend == "training_mps")
+        self.shared = (
+            FusedSwiGLU(cfg.dim, cfg.shared_expert_dim)
+            if cfg.moe_backend == "training_cuda"
+            else SwiGLU(
+                cfg.dim, cfg.shared_expert_dim,
+                cfg.moe_backend == "training_mps",
+            )
+        )
 
     def forward(self, x: Tensor) -> tuple[Tensor, Tensor | None, Tensor | None]:
         flat = x.reshape(-1, x.shape[-1])

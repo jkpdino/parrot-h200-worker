@@ -29,15 +29,20 @@ class CudaTrainingTests(unittest.TestCase):
                 reference.blocks, grouped.blocks
             ):
                 experts = reference_block.moe.experts
-                grouped_block.moe.expert_gate.copy_(torch.stack([
-                    expert.gate.weight.T for expert in experts
-                ]))
-                grouped_block.moe.expert_up.copy_(torch.stack([
-                    expert.up.weight.T for expert in experts
+                grouped_block.moe.expert_gate_up.copy_(torch.stack([
+                    torch.cat((expert.gate.weight.T, expert.up.weight.T), dim=-1)
+                    for expert in experts
                 ]))
                 grouped_block.moe.expert_down.copy_(torch.stack([
                     expert.down.weight.T for expert in experts
                 ]))
+                grouped_block.moe.shared.gate_up.weight.copy_(torch.cat((
+                    reference_block.moe.shared.gate.weight,
+                    reference_block.moe.shared.up.weight,
+                )))
+                grouped_block.moe.shared.down.weight.copy_(
+                    reference_block.moe.shared.down.weight
+                )
 
         ids = torch.randint(cfg.vocab_size, (4, 32), device="cuda")
         expected = reference(
@@ -52,13 +57,13 @@ class CudaTrainingTests(unittest.TestCase):
         for reference_block, grouped_block in zip(
             reference.blocks, grouped.blocks
         ):
-            expected_gate_grad = torch.stack([
-                expert.gate.weight.grad.T
+            expected_gate_up_grad = torch.stack([
+                torch.cat((expert.gate.weight.grad.T, expert.up.weight.grad.T), dim=-1)
                 for expert in reference_block.moe.experts
             ])
             torch.testing.assert_close(
-                grouped_block.moe.expert_gate.grad,
-                expected_gate_grad,
+                grouped_block.moe.expert_gate_up.grad,
+                expected_gate_up_grad,
                 atol=3e-2,
                 rtol=3e-2,
             )
