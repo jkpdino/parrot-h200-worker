@@ -1,0 +1,413 @@
+{
+  "config": {
+    "batch": 960,
+    "seq_len": 512,
+    "bag_size": 4,
+    "n_experts": 32,
+    "top_k": 2,
+    "warmup": 2,
+    "runs": 1,
+    "dtype": "bfloat16",
+    "compile_mode": "default",
+    "require_h200": true
+  },
+  "forward_seconds": 0.21443040466308594,
+  "backward_seconds": 0.27013592529296876,
+  "elapsed_seconds": 0.4845663299560547,
+  "source_tokens_per_second": 1014350.2955407073,
+  "total_summed_kernel_us": 477117.413,
+  "kernel_launches": 2183,
+  "top_cuda_kernels": [
+    {
+      "name": "void at::native::indexFuncLargeIndex<c10::BFloat16, long, unsigned int, 2, 2, -2, true, at::native::(anonymous namespace)::ReduceAdd>(at::cuda::detail::TensorInfo<c10::BFloat16, unsigned int>, at::cuda::detail::TensorInfo<c10::BFloat16 const, unsigned int>, at::cuda::detail::TensorInfo<long const, unsigned int>, int, int, unsigned int, unsigned int, long, long, at::native::(anonymous namespace)::ReduceAdd const&, c10::BFloat16)",
+      "calls": 16,
+      "total_us": 25902.893,
+      "average_us": 1618.9308125,
+      "percent_of_summed_kernel_time": 5.429039539162659
+    },
+    {
+      "name": "nvjet_tst_192x192_64x3_2x1_v_bz_coopB_NNN",
+      "calls": 49,
+      "total_us": 17048.007,
+      "average_us": 347.91851020408166,
+      "percent_of_summed_kernel_time": 3.5731261394980782
+    },
+    {
+      "name": "_ZN7cutlass13device_kernelINS_4gemm6kernel13GemmUniversalINS1_17GroupProblemShapeIN4cute5tupleIJiiiEEEEENS1_10collective13CollectiveMmaINS1_39MainloopSm90ArrayTmaGmmaWarpSpecializedILi4ENS6_IJNS5_1CILi2EEENSC_ILi1EEESE_EEENS1_43KernelPtrArrayTmaWarpSpecializedCooperativeEEENS6_IJNSC_ILi128EEENSC_ILi256EEENSC_ILi64EEEEEENS_10bfloat16_tEPNS6_IJlSE_NSC_ILi0EEEEEESM_PNS6_IJSE_lSN_EEENS5_8TiledMMAINS5_8MMA_AtomIJNS5_4SM904GMMA28MMA_64x256x16_F32BF16BF16_SSILNSV_5MajorE0ELSX_1ELNSV_7ScaleInE1ELSY_1EEEEEENS5_6LayoutISF_NS6_IJSE_SN_SN_EEEEENS6_IJNS5_10UnderscoreES14_S14_EEEEENS5_13SM90_TMA_LOADENS5_14ComposedLayoutINS5_7SwizzleILi3ELi4ELi3EEENS5_18smem_ptr_flag_bitsILi16EEENS11_INS6_IJNSC_ILi8EEESK_EEENS6_IJSK_SE_EEEEEEEvNS5_8identityENS5_23SM90_TMA_LOAD_MULTICASTENS18_IS1A_S1C_NS11_INS6_IJSK_S1D_EEENS6_IJSE_SK_EEEEEEEvS1I_EENS_8epilogue10collective18CollectiveEpilogueINS1P_30Sm90PtrArrayTmaWarpSpecializedILi4ELi2ELi16ELb1ELb0ELi2EEEJSL_NS6_IJSI_NSC_ILi32EEEEEESM_SP_SM_SP_NS1P_6fusion15FusionCallbacksIS1T_NS1W_17LinearCombinationISM_fSM_fLNS_15FloatRoundStyleE2EEESL_S1V_JEEES17_NS18_INS19_ILi2ELi4ELi3EEES1C_NS11_INS6_IJS1D_S1U_EEENS6_IJS1U_SE_EEEEEEENS5_17SM75_U32x4_LDSM_NENS5_14SM90_TMA_STOREES26_NS5_17SM90_U32x4_STSM_NENS5_9Copy_AtomIJS29_NS_6half_tEEEEvEEEvvEEEEvNT_6ParamsE",
+      "calls": 32,
+      "total_us": 15260.992,
+      "average_us": 476.906,
+      "percent_of_summed_kernel_time": 3.198582064746398
+    },
+    {
+      "name": "_ZN7cutlass13device_kernelINS_4gemm6kernel13GemmUniversalINS1_17GroupProblemShapeIN4cute5tupleIJiiiEEEEENS1_10collective13CollectiveMmaINS1_39MainloopSm90ArrayTmaGmmaWarpSpecializedILi4ENS6_IJNS5_1CILi2EEENSC_ILi1EEESE_EEENS1_43KernelPtrArrayTmaWarpSpecializedCooperativeEEENS6_IJNSC_ILi128EEENSC_ILi256EEENSC_ILi64EEEEEENS_10bfloat16_tEPNS6_IJlSE_NSC_ILi0EEEEEESM_SP_NS5_8TiledMMAINS5_8MMA_AtomIJNS5_4SM904GMMA28MMA_64x256x16_F32BF16BF16_SSILNST_5MajorE0ELSV_0ELNST_7ScaleInE1ELSW_1EEEEEENS5_6LayoutISF_NS6_IJSE_SN_SN_EEEEENS6_IJNS5_10UnderscoreES12_S12_EEEEENS5_13SM90_TMA_LOADENS5_14ComposedLayoutINS5_7SwizzleILi3ELi4ELi3EEENS5_18smem_ptr_flag_bitsILi16EEENSZ_INS6_IJNSC_ILi8EEESK_EEENS6_IJSK_SE_EEEEEEEvNS5_8identityENS5_23SM90_TMA_LOAD_MULTICASTES1F_vS1G_EENS_8epilogue10collective18CollectiveEpilogueINS1J_30Sm90PtrArrayTmaWarpSpecializedILi4ELi2ELi16ELb1ELb0ELi2EEEJSL_NS6_IJSI_NSC_ILi32EEEEEESM_SP_SM_SP_NS1J_6fusion15FusionCallbacksIS1N_NS1Q_17LinearCombinationISM_fSM_fLNS_15FloatRoundStyleE2EEESL_S1P_JEEES15_NS16_INS17_ILi2ELi4ELi3EEES1A_NSZ_INS6_IJS1B_S1O_EEENS6_IJS1O_SE_EEEEEEENS5_17SM75_U32x4_LDSM_NENS5_14SM90_TMA_STOREES20_NS5_17SM90_U32x4_STSM_NENS5_9Copy_AtomIJS23_NS_6half_tEEEEvEEEvvEEEEvNT_6ParamsE",
+      "calls": 32,
+      "total_us": 14759.391,
+      "average_us": 461.23096875,
+      "percent_of_summed_kernel_time": 3.0934505004117296
+    },
+    {
+      "name": "_ZN7cutlass13device_kernelINS_4gemm6kernel13GemmUniversalINS1_17GroupProblemShapeIN4cute5tupleIJiiiEEEEENS1_10collective13CollectiveMmaINS1_39MainloopSm90ArrayTmaGmmaWarpSpecializedILi4ENS6_IJNS5_1CILi2EEENSC_ILi1EEESE_EEENS1_43KernelPtrArrayTmaWarpSpecializedCooperativeEEENS6_IJNSC_ILi128EEENSC_ILi256EEENSC_ILi64EEEEEENS_10bfloat16_tEPNS6_IJSE_lNSC_ILi0EEEEEESM_SP_NS5_8TiledMMAINS5_8MMA_AtomIJNS5_4SM904GMMA28MMA_64x256x16_F32BF16BF16_SSILNST_5MajorE1ELSV_1ELNST_7ScaleInE1ELSW_1EEEEEENS5_6LayoutISF_NS6_IJSE_SN_SN_EEEEENS6_IJNS5_10UnderscoreES12_S12_EEEEENS5_13SM90_TMA_LOADENS5_14ComposedLayoutINS5_7SwizzleILi3ELi4ELi3EEENS5_18smem_ptr_flag_bitsILi16EEENSZ_INS6_IJSK_NSC_ILi8EEEEEENS6_IJSE_SK_EEEEEEEvNS5_8identityENS5_23SM90_TMA_LOAD_MULTICASTES1F_vS1G_EENS_8epilogue10collective18CollectiveEpilogueINS1J_30Sm90PtrArrayTmaWarpSpecializedILi4ELi2ELi16ELb1ELb0ELi2EEEJSL_NS6_IJSI_NSC_ILi32EEEEEESM_PNS6_IJlSE_SN_EEESM_S1R_NS1J_6fusion15FusionCallbacksIS1N_NS1S_17LinearCombinationISM_fSM_fLNS_15FloatRoundStyleE2EEESL_S1P_JEEES15_NS16_INS17_ILi2ELi4ELi3EEES1A_NSZ_INS6_IJS1B_S1O_EEENS6_IJS1O_SE_EEEEEEENS5_17SM75_U32x4_LDSM_NENS5_14SM90_TMA_STOREES22_NS5_17SM90_U32x4_STSM_NENS5_9Copy_AtomIJS25_NS_6half_tEEEEvEEEvvEEEEvNT_6ParamsE",
+      "calls": 32,
+      "total_us": 14232.348,
+      "average_us": 444.760875,
+      "percent_of_summed_kernel_time": 2.9829864960304855
+    },
+    {
+      "name": "void pytorch_flash::flash_bwd_dq_dk_dv_loop_seqk_parallel_kernel<Flash_bwd_kernel_traits<96, 64, 128, 8, 2, 4, 4, true, false, cutlass::bfloat16_t, Flash_kernel_traits<96, 64, 128, 8, cutlass::bfloat16_t> >, false, true, false, false, true, true, false>(pytorch_flash::Flash_bwd_params)",
+      "calls": 16,
+      "total_us": 13563.32,
+      "average_us": 847.7075,
+      "percent_of_summed_kernel_time": 2.842763569394186
+    },
+    {
+      "name": "triton_per_fused_mul_sum_79",
+      "calls": 4,
+      "total_us": 12458.419,
+      "average_us": 3114.60475,
+      "percent_of_summed_kernel_time": 2.6111851423875825
+    },
+    {
+      "name": "triton_red_fused__log_softmax__log_softmax_backward_data__to_copy_add_2",
+      "calls": 1,
+      "total_us": 11295.375,
+      "average_us": 11295.375,
+      "percent_of_summed_kernel_time": 2.367420406850672
+    },
+    {
+      "name": "nvjet_tst_192x192_64x4_1x2_h_bz_coopB_TNN",
+      "calls": 25,
+      "total_us": 9974.121,
+      "average_us": 398.96484,
+      "percent_of_summed_kernel_time": 2.0904961186147273
+    },
+    {
+      "name": "triton_poi_fused_add_mul_neg_slice_backward_32",
+      "calls": 12,
+      "total_us": 7848.48,
+      "average_us": 654.04,
+      "percent_of_summed_kernel_time": 1.6449787381790653
+    },
+    {
+      "name": "triton_per_fused__to_copy_add_div_mul_pow_sum_11",
+      "calls": 4,
+      "total_us": 7726.335999999999,
+      "average_us": 1931.5839999999998,
+      "percent_of_summed_kernel_time": 1.619378331094363
+    },
+    {
+      "name": "nvjet_tst_128x256_64x4_2x1_v_badd_coopA_NTN",
+      "calls": 1,
+      "total_us": 7670.08,
+      "average_us": 7670.08,
+      "percent_of_summed_kernel_time": 1.6075875226964311
+    },
+    {
+      "name": "triton_per_fused_mul_sum_69",
+      "calls": 4,
+      "total_us": 7099.1990000000005,
+      "average_us": 1774.7997500000001,
+      "percent_of_summed_kernel_time": 1.4879354235599864
+    },
+    {
+      "name": "void (anonymous namespace)::indexing_backward_kernel<c10::BFloat16, 4>(long const*, long const*, c10::BFloat16 const*, c10::BFloat16*, long, long, long, long, bool)",
+      "calls": 16,
+      "total_us": 6819.5779999999995,
+      "average_us": 426.22362499999997,
+      "percent_of_summed_kernel_time": 1.4293290947232729
+    },
+    {
+      "name": "triton_per_fused__to_copy_add_div_mul_pow_sum_40",
+      "calls": 4,
+      "total_us": 6818.492,
+      "average_us": 1704.623,
+      "percent_of_summed_kernel_time": 1.429101477794943
+    },
+    {
+      "name": "triton_poi_fused_cat_15",
+      "calls": 16,
+      "total_us": 6744.861,
+      "average_us": 421.5538125,
+      "percent_of_summed_kernel_time": 1.4136690081357395
+    },
+    {
+      "name": "nvjet_tst_192x192_64x4_2x1_v_bz_coopB_TNN",
+      "calls": 32,
+      "total_us": 6569.914,
+      "average_us": 205.3098125,
+      "percent_of_summed_kernel_time": 1.3770015138810288
+    },
+    {
+      "name": "triton_per_fused__to_copy_add_mean_mul_pow_rsqrt_sum_76",
+      "calls": 4,
+      "total_us": 6268.059,
+      "average_us": 1567.01475,
+      "percent_of_summed_kernel_time": 1.3137351161819786
+    },
+    {
+      "name": "triton_per_fused__to_copy_add_mean_mul_pow_rsqrt_stack_sum_74",
+      "calls": 1,
+      "total_us": 5947.128,
+      "average_us": 5947.128,
+      "percent_of_summed_kernel_time": 1.2464705412040786
+    },
+    {
+      "name": "nvjet_tst_192x192_64x3_1x2_h_bz_coopB_splitK_NTN",
+      "calls": 32,
+      "total_us": 5830.933,
+      "average_us": 182.21665625,
+      "percent_of_summed_kernel_time": 1.2221169970168329
+    },
+    {
+      "name": "triton_per_fused__to_copy_add_mean_mul_pow_rsqrt_stack_sum_73",
+      "calls": 1,
+      "total_us": 5799.736,
+      "average_us": 5799.736,
+      "percent_of_summed_kernel_time": 1.2155783549237176
+    },
+    {
+      "name": "triton_per_fused__to_copy_add_mean_mul_pow_rsqrt_stack_sum_66",
+      "calls": 1,
+      "total_us": 5412.054,
+      "average_us": 5412.054,
+      "percent_of_summed_kernel_time": 1.1343233033500708
+    },
+    {
+      "name": "triton_per_fused__to_copy_add_mean_mul_pow_rsqrt_stack_sum_71",
+      "calls": 1,
+      "total_us": 5151.605,
+      "average_us": 5151.605,
+      "percent_of_summed_kernel_time": 1.0797352726256502
+    },
+    {
+      "name": "triton_per_fused__to_copy_add_div_mul_pow_sum_56",
+      "calls": 4,
+      "total_us": 5080.758,
+      "average_us": 1270.1895,
+      "percent_of_summed_kernel_time": 1.0648863071363106
+    },
+    {
+      "name": "triton_red_fused__to_copy_mul_sum_9",
+      "calls": 4,
+      "total_us": 4857.397,
+      "average_us": 1214.34925,
+      "percent_of_summed_kernel_time": 1.0180716250655895
+    },
+    {
+      "name": "triton_red_fused__to_copy_index_put_index_select_mul_new_zeros_sum_29",
+      "calls": 15,
+      "total_us": 4840.434,
+      "average_us": 322.6956,
+      "percent_of_summed_kernel_time": 1.0145163157145136
+    },
+    {
+      "name": "triton_per_fused_mul_sum_7",
+      "calls": 4,
+      "total_us": 4813.106,
+      "average_us": 1203.2765,
+      "percent_of_summed_kernel_time": 1.0087885851275773
+    },
+    {
+      "name": "triton_poi_fused_stack_5",
+      "calls": 12,
+      "total_us": 4740.787,
+      "average_us": 395.06558333333334,
+      "percent_of_summed_kernel_time": 0.9936311001921031
+    },
+    {
+      "name": "void pytorch_flash::flash_fwd_kernel<Flash_fwd_kernel_traits<96, 128, 64, 4, false, false, cutlass::bfloat16_t, Flash_kernel_traits<96, 128, 64, 4, cutlass::bfloat16_t> >, false, true, false, false, true, true, false, false>(pytorch_flash::Flash_fwd_params)",
+      "calls": 16,
+      "total_us": 4634.6449999999995,
+      "average_us": 289.66531249999997,
+      "percent_of_summed_kernel_time": 0.9713845845320257
+    },
+    {
+      "name": "triton_red_fused__to_copy_mul_sum_38",
+      "calls": 4,
+      "total_us": 4547.028,
+      "average_us": 1136.757,
+      "percent_of_summed_kernel_time": 0.9530207609505127
+    },
+    {
+      "name": "triton_per_fused__to_copy_add_div_mul_pow_sum_50",
+      "calls": 3,
+      "total_us": 4455.762,
+      "average_us": 1485.254,
+      "percent_of_summed_kernel_time": 0.9338921361061285
+    },
+    {
+      "name": "triton_per_fused__to_copy_add_mean_mul_pow_rsqrt_stack_sum_65",
+      "calls": 1,
+      "total_us": 4443.762,
+      "average_us": 4443.762,
+      "percent_of_summed_kernel_time": 0.9313770319256823
+    },
+    {
+      "name": "triton_per_fused_mul_sum_36",
+      "calls": 4,
+      "total_us": 4274.096,
+      "average_us": 1068.524,
+      "percent_of_summed_kernel_time": 0.8958163931023829
+    },
+    {
+      "name": "triton_per_fused__to_copy_add_div_mul_pow_sum_61",
+      "calls": 4,
+      "total_us": 4233.138,
+      "average_us": 1058.2845,
+      "percent_of_summed_kernel_time": 0.8872319233504898
+    },
+    {
+      "name": "nvjet_tst_256x128_64x4_1x2_h_bz_coopA_TNT",
+      "calls": 40,
+      "total_us": 4163.44,
+      "average_us": 104.08599999999998,
+      "percent_of_summed_kernel_time": 0.8726237790864279
+    },
+    {
+      "name": "triton_red_fused__log_softmax__to_copy_84",
+      "calls": 1,
+      "total_us": 4154.737,
+      "average_us": 4154.737,
+      "percent_of_summed_kernel_time": 0.8707996997795593
+    },
+    {
+      "name": "triton_per_fused__to_copy_add_mean_mul_pow_rsqrt_stack_sum_64",
+      "calls": 1,
+      "total_us": 4141.457,
+      "average_us": 4141.457,
+      "percent_of_summed_kernel_time": 0.8680163178198654
+    },
+    {
+      "name": "triton_per_fused__to_copy_add_mean_mul_pow_rsqrt_stack_sum_62",
+      "calls": 1,
+      "total_us": 4011.056,
+      "average_us": 4011.056,
+      "percent_of_summed_kernel_time": 0.8406853094670012
+    },
+    {
+      "name": "triton_per_fused__to_copy_add_mean_mul_pow_rsqrt_stack_sum_58",
+      "calls": 1,
+      "total_us": 3953.841,
+      "average_us": 3953.841,
+      "percent_of_summed_kernel_time": 0.8286935023266484
+    },
+    {
+      "name": "triton_red_fused__to_copy_mul_sum_45",
+      "calls": 4,
+      "total_us": 3767.919,
+      "average_us": 941.97975,
+      "percent_of_summed_kernel_time": 0.7897257357069044
+    },
+    {
+      "name": "triton_per_fused_mul_sum_43",
+      "calls": 4,
+      "total_us": 3706.7039999999997,
+      "average_us": 926.6759999999999,
+      "percent_of_summed_kernel_time": 0.776895560506403
+    },
+    {
+      "name": "triton_red_fused__to_copy_mul_sum_86",
+      "calls": 4,
+      "total_us": 3539.343,
+      "average_us": 884.83575,
+      "percent_of_summed_kernel_time": 0.7418180312777644
+    },
+    {
+      "name": "void pytorch_flash::flash_bwd_dot_do_o_kernel<true, Flash_bwd_kernel_traits<96, 64, 128, 8, 2, 4, 4, true, false, cutlass::bfloat16_t, Flash_kernel_traits<96, 64, 128, 8, cutlass::bfloat16_t> > >(pytorch_flash::Flash_bwd_params)",
+      "calls": 16,
+      "total_us": 3428.013,
+      "average_us": 214.2508125,
+      "percent_of_summed_kernel_time": 0.7184841522436742
+    },
+    {
+      "name": "triton_per_fused__to_copy_add_div_mul_pow_sum_67",
+      "calls": 4,
+      "total_us": 3390.191,
+      "average_us": 847.54775,
+      "percent_of_summed_kernel_time": 0.7105569630509377
+    },
+    {
+      "name": "triton_poi_fused_mul_new_zeros_scatter_add_0",
+      "calls": 1,
+      "total_us": 3385.966,
+      "average_us": 3385.966,
+      "percent_of_summed_kernel_time": 0.7096714367874055
+    },
+    {
+      "name": "triton_per_fused__to_copy_add_mean_mul_pow_rsqrt_stack_sum_57",
+      "calls": 1,
+      "total_us": 3296.558,
+      "average_us": 3296.558,
+      "percent_of_summed_kernel_time": 0.6909322339069607
+    },
+    {
+      "name": "triton_poi_fused_index_19",
+      "calls": 16,
+      "total_us": 3187.278,
+      "average_us": 199.204875,
+      "percent_of_summed_kernel_time": 0.6680280185036969
+    },
+    {
+      "name": "void at::native::elementwise_kernel<128, 4, at::native::gpu_kernel_impl_nocast<at::native::direct_copy_kernel_cuda(at::TensorIteratorBase&)::{lambda()#3}::operator()() const::{lambda()#12}::operator()() const::{lambda(c10::BFloat16)#1}>(at::TensorIteratorBase&, at::native::direct_copy_kernel_cuda(at::TensorIteratorBase&)::{lambda()#3}::operator()() const::{lambda()#12}::operator()() const::{lambda(c10::BFloat16)#1} const&)::{lambda(int)#1}>(int, at::native::gpu_kernel_impl_nocast<at::native::direct_copy_kernel_cuda(at::TensorIteratorBase&)::{lambda()#3}::operator()() const::{lambda()#12}::operator()() const::{lambda(c10::BFloat16)#1}>(at::TensorIteratorBase&, at::native::direct_copy_kernel_cuda(at::TensorIteratorBase&)::{lambda()#3}::operator()() const::{lambda()#12}::operator()() const::{lambda(c10::BFloat16)#1} const&)::{lambda(int)#1})",
+      "calls": 12,
+      "total_us": 3180.782,
+      "average_us": 265.0651666666667,
+      "percent_of_summed_kernel_time": 0.6666665087740153
+    },
+    {
+      "name": "triton_per_fused_mul_sum_54",
+      "calls": 4,
+      "total_us": 3164.813,
+      "average_us": 791.20325,
+      "percent_of_summed_kernel_time": 0.6633195338858865
+    },
+    {
+      "name": "triton_per_fused__to_copy_add_mean_mul_pow_rsqrt_stack_sum_56",
+      "calls": 1,
+      "total_us": 3146.157,
+      "average_us": 3146.157,
+      "percent_of_summed_kernel_time": 0.6594093852533528
+    }
+  ],
+  "operator_table": "-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  \n                                                   Name    Self CPU %      Self CPU   CPU total %     CPU total  CPU time avg     Self CUDA   Self CUDA %    CUDA total  CUDA time avg    # of Calls  \n-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  \n                                         parrot_forward         0.00%       0.000us         0.00%       0.000us       0.000us     213.441ms        44.55%     213.441ms     213.441ms             1  \n                                               aten::mm         0.57%       4.574ms        11.86%      95.212ms     272.034us      59.094ms        12.33%      59.094ms     168.839us           350  \n                                      aten::_grouped_mm         0.13%       1.073ms         2.97%      23.867ms     248.618us      44.471ms         9.28%      44.471ms     463.238us            96  \n                                        aten::index_add         0.02%     172.130us         0.05%     423.059us      26.441us      25.903ms         5.41%      27.362ms       1.710ms            16  \nvoid at::native::indexFuncLargeIndex<c10::BFloat16, ...         0.00%       0.000us         0.00%       0.000us       0.000us      25.903ms         5.41%      25.903ms       1.619ms            16  \n                        aten::_flash_attention_backward         0.03%     276.578us         3.58%      28.716ms       1.795ms      19.539ms         4.08%      25.397ms       1.587ms            16  \n              nvjet_tst_192x192_64x3_2x1_v_bz_coopB_NNN         0.00%       0.000us         0.00%       0.000us       0.000us      17.048ms         3.56%      17.048ms     347.919us            49  \n_ZN7cutlass13device_kernelINS_4gemm6kernel13GemmUniv...         0.00%       0.000us         0.00%       0.000us       0.000us      15.261ms         3.18%      15.261ms     476.906us            32  \n_ZN7cutlass13device_kernelINS_4gemm6kernel13GemmUniv...         0.00%       0.000us         0.00%       0.000us       0.000us      14.759ms         3.08%      14.759ms     461.231us            32  \n_ZN7cutlass13device_kernelINS_4gemm6kernel13GemmUniv...         0.00%       0.000us         0.00%       0.000us       0.000us      14.232ms         2.97%      14.232ms     444.761us            32  \nvoid pytorch_flash::flash_bwd_dq_dk_dv_loop_seqk_par...         0.00%       0.000us         0.00%       0.000us       0.000us      13.563ms         2.83%      13.563ms     847.708us            16  \n                            triton_per_fused_mul_sum_79         0.00%      18.934us         0.00%      34.724us       8.681us      12.458ms         2.60%      12.458ms       3.115ms             4  \n                            triton_per_fused_mul_sum_79         0.00%       0.000us         0.00%       0.000us       0.000us      12.458ms         2.60%      12.458ms       3.115ms             4  \ntriton_red_fused__log_softmax__log_softmax_backward_...         0.00%       9.709us         0.00%      14.360us      14.360us      11.295ms         2.36%      11.295ms      11.295ms             1  \ntriton_red_fused__log_softmax__log_softmax_backward_...         0.00%       0.000us         0.00%       0.000us       0.000us      11.295ms         2.36%      11.295ms      11.295ms             1  \n              nvjet_tst_192x192_64x4_1x2_h_bz_coopB_TNN         0.00%       0.000us         0.00%       0.000us       0.000us       9.974ms         2.08%       9.974ms     398.965us            25  \n         triton_poi_fused_add_mul_neg_slice_backward_32         0.01%      57.469us         0.84%       6.727ms     560.618us       7.848ms         1.64%       7.848ms     654.040us            12  \n         triton_poi_fused_add_mul_neg_slice_backward_32         0.00%       0.000us         0.00%       0.000us       0.000us       7.848ms         1.64%       7.848ms     654.040us            12  \n       triton_per_fused__to_copy_add_div_mul_pow_sum_11         0.00%      30.030us         0.01%      95.511us      23.878us       7.726ms         1.61%       7.726ms       1.932ms             4  \n       triton_per_fused__to_copy_add_div_mul_pow_sum_11         0.00%       0.000us         0.00%       0.000us       0.000us       7.726ms         1.61%       7.726ms       1.932ms             4  \n                                            aten::addmm         0.00%      30.392us         0.23%       1.868ms       1.868ms       7.697ms         1.61%       7.697ms       7.697ms             1  \n            nvjet_tst_128x256_64x4_2x1_v_badd_coopA_NTN         0.00%       0.000us         0.00%       0.000us       0.000us       7.670ms         1.60%       7.670ms       7.670ms             1  \n                                 aten::_index_put_impl_         0.08%     633.371us         7.40%      59.427ms       3.714ms       7.529ms         1.57%       8.090ms     505.612us            16  \n                            triton_per_fused_mul_sum_69         0.00%      17.565us         0.00%      33.523us       8.381us       7.099ms         1.48%       7.099ms       1.775ms             4  \n                            triton_per_fused_mul_sum_69         0.00%       0.000us         0.00%       0.000us       0.000us       7.099ms         1.48%       7.099ms       1.775ms             4  \nvoid (anonymous namespace)::indexing_backward_kernel...         0.00%       0.000us         0.00%       0.000us       0.000us       6.820ms         1.42%       6.820ms     426.224us            16  \n       triton_per_fused__to_copy_add_div_mul_pow_sum_40         0.00%      30.567us         0.02%     183.749us      45.937us       6.818ms         1.42%       6.818ms       1.705ms             4  \n       triton_per_fused__to_copy_add_div_mul_pow_sum_40         0.00%       0.000us         0.00%       0.000us       0.000us       6.818ms         1.42%       6.818ms       1.705ms             4  \n                                triton_poi_fused_cat_15         0.01%      83.222us         1.36%      10.898ms     681.153us       6.745ms         1.41%       6.745ms     421.554us            16  \n                                triton_poi_fused_cat_15         0.00%       0.000us         0.00%       0.000us       0.000us       6.745ms         1.41%       6.745ms     421.554us            16  \n              nvjet_tst_192x192_64x4_2x1_v_bz_coopB_TNN         0.00%       0.000us         0.00%       0.000us       0.000us       6.570ms         1.37%       6.570ms     205.310us            32  \ntriton_per_fused__to_copy_add_mean_mul_pow_rsqrt_sum...         0.01%      69.271us         0.01%      84.313us      21.078us       6.268ms         1.31%       6.268ms       1.567ms             4  \ntriton_per_fused__to_copy_add_mean_mul_pow_rsqrt_sum...         0.00%       0.000us         0.00%       0.000us       0.000us       6.268ms         1.31%       6.268ms       1.567ms             4  \ntriton_per_fused__to_copy_add_mean_mul_pow_rsqrt_sta...         0.00%      33.305us         0.00%      37.989us      37.989us       5.947ms         1.24%       5.947ms       5.947ms             1  \ntriton_per_fused__to_copy_add_mean_mul_pow_rsqrt_sta...         0.00%       0.000us         0.00%       0.000us       0.000us       5.947ms         1.24%       5.947ms       5.947ms             1  \n       nvjet_tst_192x192_64x3_1x2_h_bz_coopB_splitK_NTN         0.00%       0.000us         0.00%       0.000us       0.000us       5.831ms         1.22%       5.831ms     182.217us            32  \ntriton_per_fused__to_copy_add_mean_mul_pow_rsqrt_sta...         0.00%      26.633us         0.00%      33.136us      33.136us       5.800ms         1.21%       5.800ms       5.800ms             1  \ntriton_per_fused__to_copy_add_mean_mul_pow_rsqrt_sta...         0.00%       0.000us         0.00%       0.000us       0.000us       5.800ms         1.21%       5.800ms       5.800ms             1  \ntriton_per_fused__to_copy_add_mean_mul_pow_rsqrt_sta...         0.00%      25.242us         0.00%      30.618us      30.618us       5.412ms         1.13%       5.412ms       5.412ms             1  \ntriton_per_fused__to_copy_add_mean_mul_pow_rsqrt_sta...         0.00%       0.000us         0.00%       0.000us       0.000us       5.412ms         1.13%       5.412ms       5.412ms             1  \n-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  \nSelf CPU time total: 802.610ms\nSelf CUDA time total: 479.155ms\n",
+  "gpu_memcpy_calls": 33,
+  "gpu_memset_calls": 491,
+  "kernel_categories": [
+    {
+      "category": "triton_reduction_and_elementwise",
+      "calls": 771,
+      "total_us": 260672.26300000012,
+      "percent_of_summed_kernel_time": 54.63482486647372
+    },
+    {
+      "category": "gemm",
+      "calls": 543,
+      "total_us": 110512.16400000002,
+      "percent_of_summed_kernel_time": 23.162467138880135
+    },
+    {
+      "category": "routing_and_indexing",
+      "calls": 482,
+      "total_us": 57053.38599999999,
+      "percent_of_summed_kernel_time": 11.95793413643446
+    },
+    {
+      "category": "attention",
+      "calls": 64,
+      "total_us": 24173.829999999998,
+      "percent_of_summed_kernel_time": 5.066641740866414
+    },
+    {
+      "category": "cross_entropy",
+      "calls": 4,
+      "total_us": 15476.736,
+      "percent_of_summed_kernel_time": 3.2438002844385814
+    },
+    {
+      "category": "other",
+      "calls": 319,
+      "total_us": 9229.034,
+      "percent_of_summed_kernel_time": 1.9343318329067145
+    }
+  ]
+}

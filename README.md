@@ -312,6 +312,31 @@ and launch overhead, so it is an upper bound rather than an expected end-to-end
 rate. The fused 32-expert result realizes 150.9 effective TFLOP/s against that
 lower bound, or 15.3% of the dense math ceiling.
 
+### H200 profile
+
+A steady-state batch-960 profile, captured after two compile warmups, measured
+214.4 ms forward and 270.1 ms backward. Profiling overhead increased the step to
+484.6 ms, versus 473.5 ms without the profiler. Actual CUDA kernel activity
+accounted for 477.1 ms across 2,183 launches:
+
+| Kernel category | CUDA time | Share |
+| --- | ---: | ---: |
+| Triton reductions and elementwise fusion | 260.7 ms | 54.6% |
+| Dense and grouped GEMMs | 110.5 ms | 23.2% |
+| Routing and indexing | 57.1 ms | 12.0% |
+| Flash attention | 24.2 ms | 5.1% |
+| Cross-entropy | 15.5 ms | 3.2% |
+| Other kernels | 9.2 ms | 1.9% |
+
+The category grouping uses CUDA kernel names from the Chrome trace. The GEMM
+portion processes an approximate 71.1 TFLOP active-parameter lower bound in
+110.5 ms, equivalent to about 643 TFLOP/s or 65% of the H200 dense BF16 peak
+while tensor-core kernels are running. End-to-end utilization is much lower
+because 76.8% of kernel time is spent in reductions, normalization, routing,
+indexing, attention, and loss. Even an ideal 2x GEMM speedup would improve the
+whole step by only about 12.9%. The trace and parsed summary are saved in
+`benchmark_cuda_h200_trace.json.gz` and `benchmark_cuda_h200_profile.json`.
+
 `runpod-h200/` also packages the benchmark as a queue worker. Build the image for
 `linux/amd64` from the repository root and deploy it on an H200 pool. See
 `runpod-h200/README.md` for the image and request format.
