@@ -283,6 +283,16 @@ TorchInductor compilation, the median of seven runs after two warmups was
 positions/second**. Peak allocated memory was 141.52 GB. The result is saved in
 `benchmark_cuda_h200_results.json`.
 
+[NVIDIA specifies](https://www.nvidia.com/en-in/data-center/h200/) 1,979 BF16
+Tensor TFLOP/s for H200 SXM with structured sparsity, or about 989.5 TFLOP/s for
+these dense weights. Dividing that dense peak by the active-parameter training
+lower bound (`6 * 96,217,344` operations per model position, with four source
+tokens per position) gives a **6.856 million source-token/second math-only
+ceiling**. It excludes attention, routing, normalization, loss, memory traffic,
+and launch overhead, so it is an upper bound rather than an expected end-to-end
+rate. The measured kernel realizes 144.6 effective TFLOP/s against that lower
+bound, or 14.6% of the dense math ceiling.
+
 `runpod-h200/` also packages the benchmark as a queue worker. Build the image for
 `linux/amd64` from the repository root and deploy it on an H200 pool. See
 `runpod-h200/README.md` for the image and request format.
