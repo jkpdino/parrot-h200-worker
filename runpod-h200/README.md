@@ -24,12 +24,11 @@ The timed region includes the full model forward pass, shifted cross-entropy,
 router auxiliary loss, and backward pass. It excludes gradient clearing and the
 optimizer. CUDA events measure GPU execution after the warmup iterations.
 
-The image installs Liger Kernel for fused AttnRes, RMSNorm, SwiGLU, and MoE
-forward/backward kernels. MoE autotuning is disabled because its temporary
-working sets can exceed H200 memory at the largest benchmark batches.
+TorchInductor compiles the model, including the non-atomic top-2 route combine
+and the multi-target `logsumexp` loss.
 
 For persistent development, launch a normal Pod with
 `runpod/pytorch:1.2.0-cu1281-torch280-ubuntu2404`, clone the repository into
-`/workspace`, and invoke `benchmark()` directly. The measured H200 maximum in
-the current sweep is 1,002,107 source tokens/second at batch 960, sequence 512,
-and `bag_size=4`.
+`/workspace`, and invoke `benchmark()` directly. The measured 32-expert H200
+maximum in the current sweep is 1,189,837 source tokens/second at batch 992,
+sequence 512, `bag_size=4`, and top-2 routing.

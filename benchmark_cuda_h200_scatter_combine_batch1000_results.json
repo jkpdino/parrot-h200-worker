@@ -1,0 +1,47 @@
+{
+  "backend": "training_cuda",
+  "config": {
+    "batch": 1000,
+    "seq_len": 512,
+    "bag_size": 4,
+    "n_experts": 32,
+    "top_k": 2,
+    "warmup": 2,
+    "runs": 7,
+    "dtype": "bfloat16",
+    "compile_mode": "default",
+    "require_h200": true
+  },
+  "device": {
+    "name": "NVIDIA H200",
+    "compute_capability": [
+      9,
+      0
+    ],
+    "total_memory_bytes": 150109880320,
+    "free_memory_bytes": 149557477376,
+    "torch": "2.8.0+cu128",
+    "cuda": "12.8",
+    "cudnn": 91002
+  },
+  "parameters": {
+    "total": 662644992,
+    "active_per_token": 96413952
+  },
+  "median_seconds": 0.44028219604492186,
+  "source_tokens_per_second": 1162890.538384979,
+  "model_positions_per_second": 290722.6345962447,
+  "run_seconds": [
+    0.44235235595703126,
+    0.4390114440917969,
+    0.440744140625,
+    0.44028219604492186,
+    0.438905517578125,
+    0.4408559265136719,
+    0.4401390380859375
+  ],
+  "loss": 10.562649726867676,
+  "peak_allocated_bytes": 146786356224,
+  "peak_reserved_bytes": 149281570816,
+  "scope": "full transformer + supervised vocabulary projection + shifted cross entropy + router auxiliary loss + backward; excludes optimizer and gradient clearing"
+}

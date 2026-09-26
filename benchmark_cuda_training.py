@@ -121,6 +121,8 @@ def benchmark(config: BenchmarkConfig) -> dict[str, Any]:
             end.synchronize()
             elapsed = start.elapsed_time(end) / 1_000
             last_loss = float(output.loss.detach())
+            if not torch.isfinite(output.loss.detach()):
+                raise RuntimeError(f"nonfinite loss at iteration {index}")
             if index >= config.warmup:
                 samples.append(elapsed)
             del output

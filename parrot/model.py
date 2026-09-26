@@ -107,19 +107,13 @@ class PendingResidual:
 
 
 class RMSNorm(nn.Module):
-    def __init__(self, dim: int, eps: float, use_metal: bool = False,
-                 use_cuda: bool = False):
+    def __init__(self, dim: int, eps: float, use_metal: bool = False):
         super().__init__()
         self.weight = nn.Parameter(torch.ones(dim))
         self.eps = eps
         self.use_metal = use_metal
-        self.use_cuda = use_cuda
 
     def forward(self, x: Tensor) -> Tensor:
-        if (self.use_cuda and x.device.type == "cuda" and
-                x.dtype in (torch.bfloat16, torch.float16)):
-            from .cuda_training import rms_norm
-            return rms_norm(x, self.weight, self.eps)
         if (self.use_metal and x.device.type == "mps" and
                 x.dtype in (torch.float32, torch.bfloat16, torch.float16)):
             if torch.is_grad_enabled():
@@ -142,15 +136,9 @@ class DepthMix(nn.Module):
         self.norm = RMSNorm(
             cfg.dim, cfg.norm_eps,
             use_metal=cfg.depth_backend == "metal",
-            use_cuda=cfg.moe_backend == "training_cuda",
         )
 
     def forward(self, sources: list[Tensor]) -> Tensor:
-        if (self.cfg.moe_backend == "training_cuda" and
-                sources[0].device.type == "cuda" and
-                sources[0].dtype in (torch.bfloat16, torch.float16)):
-            from .cuda_training import depth_mix
-            return depth_mix(self, sources)
         if self.cfg.depth_backend == "metal":
             from .metal_moe import metal_depth_mix
             return metal_depth_mix(self, sources)
@@ -469,12 +457,7 @@ class FusedSwiGLU(nn.Module):
 
     def forward(self, x: Tensor) -> Tensor:
         gate, up = self.gate_up(x).chunk(2, dim=-1)
-        if x.device.type == "cuda":
-            from .cuda_training import swiglu
-            hidden = swiglu(gate, up)
-        else:
-            hidden = F.silu(gate) * up
-        return self.down(hidden)
+        return self.down(F.silu(gate) * up)
 
 
 class MoE(nn.Module):
@@ -498,10 +481,10 @@ class MoE(nn.Module):
             self.experts = None
         elif cfg.moe_backend == "training_cuda":
             self.expert_gate_up = nn.Parameter(torch.empty(
-                cfg.n_experts, 2 * cfg.expert_dim, cfg.dim
+                cfg.n_experts, cfg.dim, 2 * cfg.expert_dim
             ))
             self.expert_down = nn.Parameter(torch.empty(
-                cfg.n_experts, cfg.dim, cfg.expert_dim
+                cfg.n_experts, cfg.expert_dim, cfg.dim
             ))
             nn.init.normal_(self.expert_gate_up, std=0.02)
             nn.init.normal_(self.expert_down, std=0.02)
@@ -630,11 +613,8 @@ class Block(nn.Module):
         self.attention = GlobalMLA(cfg) if (index + 1) % cfg.global_every == 0 else LocalGQA(cfg)
         self.moe = MoE(cfg)
         use_metal = cfg.depth_backend == "metal" or cfg.moe_backend != "pytorch"
-        use_cuda = cfg.moe_backend == "training_cuda"
-        self.attention_norm = RMSNorm(
-            cfg.dim, cfg.norm_eps, use_metal, use_cuda
-        )
-        self.moe_norm = RMSNorm(cfg.dim, cfg.norm_eps, use_metal, use_cuda)
+        self.attention_norm = RMSNorm(cfg.dim, cfg.norm_eps, use_metal)
+        self.moe_norm = RMSNorm(cfg.dim, cfg.norm_eps, use_metal)
 
     def attend(self, x):
         return self.attention(self.attention_norm(x))
@@ -666,10 +646,7 @@ class Parrot(nn.Module):
             if cfg.residual == "attnres" else []
         )
         use_metal = cfg.depth_backend == "metal" or cfg.moe_backend != "pytorch"
-        self.final_norm = RMSNorm(
-            cfg.dim, cfg.norm_eps, use_metal,
-            cfg.moe_backend == "training_cuda",
-        )
+        self.final_norm = RMSNorm(cfg.dim, cfg.norm_eps, use_metal)
         # F.linear below uses embedding.weight directly: no duplicate head.
         self.apply(self._init_weights)
 
@@ -752,12 +729,19 @@ class Parrot(nn.Module):
                 from .training import cross_entropy
                 lm_loss = cross_entropy(logits, targets.contiguous())
             else:
-                # One log-softmax per position; do not replicate vocab logits per bag.
+                # One normalizer per position; do not replicate vocab logits
+                # or materialize a full FP32 log-probability tensor per target.
                 loss_logits = logits if supervised_logits_only else logits[:, :-1]
-                log_probs = loss_logits.float().log_softmax(-1)
+                float_logits = loss_logits.float()
                 valid = targets != -100
-                selected = log_probs.gather(-1, targets.masked_fill(~valid, 0))
-                lm_loss = -(selected * valid).sum() / valid.sum().clamp_min(1)
+                selected = float_logits.gather(
+                    -1, targets.masked_fill(~valid, 0)
+                )
+                normalizers = torch.logsumexp(float_logits, dim=-1)
+                numerator = (
+                    normalizers * valid.sum(-1) - (selected * valid).sum(-1)
+                ).sum()
+                lm_loss = numerator / valid.sum().clamp_min(1)
             loss = lm_loss + self.config.aux_loss_weight * aux_loss
         return ModelOutput(logits, loss, lm_loss, aux_loss, expert_utilization)
 

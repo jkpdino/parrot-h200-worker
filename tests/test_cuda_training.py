@@ -30,11 +30,11 @@ class CudaTrainingTests(unittest.TestCase):
             ):
                 experts = reference_block.moe.experts
                 grouped_block.moe.expert_gate_up.copy_(torch.stack([
-                    torch.cat((expert.gate.weight, expert.up.weight), dim=0)
+                    torch.cat((expert.gate.weight, expert.up.weight), dim=0).T
                     for expert in experts
                 ]))
                 grouped_block.moe.expert_down.copy_(torch.stack([
-                    expert.down.weight for expert in experts
+                    expert.down.weight.T for expert in experts
                 ]))
                 grouped_block.moe.shared.gate_up.weight.copy_(torch.cat((
                     reference_block.moe.shared.gate.weight,
@@ -63,7 +63,7 @@ class CudaTrainingTests(unittest.TestCase):
             ])
             torch.testing.assert_close(
                 grouped_block.moe.expert_gate_up.grad,
-                expected_gate_up_grad,
+                expected_gate_up_grad.transpose(1, 2),
                 atol=3e-2,
                 rtol=3e-2,
             )
@@ -73,7 +73,7 @@ class CudaTrainingTests(unittest.TestCase):
             ])
             torch.testing.assert_close(
                 grouped_block.moe.expert_down.grad,
-                expected_down_grad,
+                expected_down_grad.transpose(1, 2),
                 atol=3e-2,
                 rtol=3e-2,
             )

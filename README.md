@@ -270,11 +270,15 @@ alone is insufficient. Raw samples are saved in the corresponding
 ## H200 CUDA training kernel
 
 Install `parrot-xl[cuda]` to enable the CUDA training backend.
-`ModelConfig(moe_backend="training_cuda")` uses Liger's Triton kernels to fuse
-AttnRes normalization, scoring, softmax, and mixing; RMSNorm; SwiGLU; and routed
-expert gather, projections, activation, and token combination. Routing remains
-exact and differentiable without token dropping. `benchmark_cuda_training.py`
-compiles the complete model with
+`ModelConfig(moe_backend="training_cuda")` packs each expert's gate and up
+projection into a grouped GEMM. It restores the expert-sorted output with a
+one-to-one scatter and lets TorchInductor fuse route weighting, the two-slot
+top-2 reduction, and the shared-expert addition. This avoids the atomic
+`index_add` previously used to combine routes. The four-target language-model
+loss similarly uses one `logsumexp` per position plus gathered target scores,
+without materializing full FP32 log probabilities. Routing remains exact and
+differentiable without token dropping. `benchmark_cuda_training.py` compiles
+the complete model with
 TorchInductor and times the forward pass, shifted cross-entropy, router
 auxiliary loss, and backward pass with CUDA events. Gradient clearing, optimizer
 updates, and data loading remain outside the timed region.
@@ -296,14 +300,17 @@ projections into one grouped GEMM and does the same for the shared expert.
 | 32 experts, separate gate/up | 960 | 1,005,200 | 142.37 GB | 144.97 GB |
 | 32 experts, fused gate/up | 960 | 1,038,099 | 140.86 GB | 143.21 GB |
 | 32 experts, fused gate/up | 992 | **1,043,680** | 145.48 GB | 147.93 GB |
+| 32 experts, non-atomic combine | 960 | 1,170,524 | 140.86 GB | 143.33 GB |
+| 32 experts, combine + loss fusion | 992 | **1,189,837** | 145.48 GB | 148.11 GB |
 
 Top-2 routing leaves the amount of expert computation per token unchanged. The
-gate/up fusion improves the batch-960 result by 3.27%, and the safe batch increase
-brings the total improvement over the original 32-expert kernel to 3.83%. Batch
-992 reserves 147.93 GB of the H200's 150.12 GB visible memory, so it is a
+non-atomic combine improves batch 960 by 12.8%. The loss rewrite and batch 992
+bring the final maximum to 14.0% above the previous 1,043,680 token/s maximum.
+Batch 1000 fits but falls to 1,162,891 token/s, so 992 is the measured optimum.
+It reserves 148.11 GB of the H200's 150.12 GB visible memory, making this a
 benchmark-only limit with little room for allocator variation. Optimizer state
 does not fit at this batch. Raw samples are saved in
-`benchmark_cuda_h200_32experts_fused_results.json`.
+`benchmark_cuda_h200_fused_final_results.json`.
 
 [NVIDIA specifies](https://www.nvidia.com/en-in/data-center/h200/) 1,979 BF16
 Tensor TFLOP/s for H200 SXM with structured sparsity, or about 989.5 TFLOP/s for
@@ -312,33 +319,31 @@ lower bound (`6 * 96,413,952` operations per model position, with four source
 tokens per position) gives a **6.842 million source-token/second math-only
 ceiling**. It excludes attention, routing, normalization, loss, memory traffic,
 and launch overhead, so it is an upper bound rather than an expected end-to-end
-rate. The fused 32-expert result realizes 150.9 effective TFLOP/s against that
-lower bound, or 15.3% of the dense math ceiling.
+rate. The final 32-expert result realizes about 172.1 effective TFLOP/s against
+that lower bound, or 17.4% of the dense math ceiling.
 
 ### H200 profile
 
 A steady-state batch-960 profile, captured after two compile warmups, measured
-214.4 ms forward and 270.1 ms backward. Profiling overhead increased the step to
-484.6 ms, versus 473.5 ms without the profiler. Actual CUDA kernel activity
-accounted for 477.1 ms across 2,183 launches:
+159.2 ms forward and 265.3 ms backward. Actual CUDA kernel activity accounted
+for 418.6 ms across 2,178 launches:
 
 | Kernel category | CUDA time | Share |
 | --- | ---: | ---: |
-| Triton reductions and elementwise fusion | 260.7 ms | 54.6% |
-| Dense and grouped GEMMs | 110.5 ms | 23.2% |
-| Routing and indexing | 57.1 ms | 12.0% |
-| Flash attention | 24.2 ms | 5.1% |
-| Cross-entropy | 15.5 ms | 3.2% |
-| Other kernels | 9.2 ms | 1.9% |
+| Triton reductions and elementwise fusion | 243.1 ms | 58.1% |
+| Dense and grouped GEMMs | 108.6 ms | 25.9% |
+| Routing and indexing | 33.8 ms | 8.1% |
+| Flash attention | 24.0 ms | 5.7% |
+| Other kernels | 9.0 ms | 2.2% |
 
-The category grouping uses CUDA kernel names from the Chrome trace. The GEMM
-portion processes an approximate 71.1 TFLOP active-parameter lower bound in
-110.5 ms, equivalent to about 643 TFLOP/s or 65% of the H200 dense BF16 peak
-while tensor-core kernels are running. End-to-end utilization is much lower
-because 76.8% of kernel time is spent in reductions, normalization, routing,
-indexing, attention, and loss. Even an ideal 2x GEMM speedup would improve the
-whole step by only about 12.9%. The trace and parsed summary are saved in
-`benchmark_cuda_h200_trace.json.gz` and `benchmark_cuda_h200_profile.json`.
+The category grouping uses CUDA kernel names from the Chrome trace. The combine
+change cuts routing and indexing from 57.1 ms to 33.8 ms and removes the former
+25.9 ms atomic accumulation. The loss rewrite trims another 4.0 ms from summed
+kernel time. The GEMM portion processes an approximate 71.1 TFLOP
+active-parameter lower bound in 108.6 ms, equivalent to about 655 TFLOP/s or
+66% of the H200 dense BF16 peak while tensor-core kernels are running. The trace
+and parsed summary are saved in `benchmark_cuda_h200_fused_final_trace.json.gz`
+and `benchmark_cuda_h200_fused_final_profile.json`.
 
 `runpod-h200/` also packages the benchmark as a queue worker. Build the image for
 `linux/amd64` from the repository root and deploy it on an H200 pool. See
